@@ -1,15 +1,18 @@
-// /app/api/reservations/summary/route.ts
+// /app/api/reservations/summary/route.ts - FIXED
 import { NextResponse } from "next/server";
 import { connectCustomerDB } from "@/lib/mongodb";
-import Reservation from "@/models/Reservation";
+import ReservationFactory from "@/models/Reservation";
 
 export async function GET() {
     try {
-        await connectCustomerDB(); // ✅ switched to customer DB
+        const db = await connectCustomerDB(); // ✅ Get the database connection
 
-        const total = await Reservation.countDocuments();
-        const pending = await Reservation.countDocuments({ reservationStatus: "pending" });
-        const completed = await Reservation.countDocuments({ reservationStatus: "confirmed" });
+        // ✅ Get the model instance from the factory function
+        const ReservationModel = ReservationFactory(db);
+
+        const total = await ReservationModel.countDocuments();
+        const pending = await ReservationModel.countDocuments({ reservationStatus: "pending" });
+        const completed = await ReservationModel.countDocuments({ reservationStatus: "confirmed" });
 
         return NextResponse.json({ total, pending, completed });
     } catch (err) {

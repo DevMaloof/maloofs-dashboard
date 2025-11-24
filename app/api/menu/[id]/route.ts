@@ -1,5 +1,6 @@
 // /app/api/menu/[id]/route.ts
-import { NextResponse } from "next/server";
+// /app/api/menu/[id]/route.ts - FIXED FOR NEXT.JS 15
+import { NextResponse, NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import MenuItem from "@/models/MenuItem";
 import { Types } from "mongoose";
@@ -19,10 +20,13 @@ cloudinary.config({
  *  - imagePublicId: string (new Cloudinary public id)
  *  - other fields to update
  */
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+    req: NextRequest,
+    context: { params: Promise<{ id: string }> } // ✅ Fixed: Use Promise params
+) {
     try {
         await connectToDatabase();
-        const { id } = params;
+        const { id } = await context.params; // ✅ Fixed: Await the params
 
         if (!Types.ObjectId.isValid(id)) {
             return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
@@ -98,10 +102,13 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 /**
  * DELETE — delete menu item and remove image from Cloudinary (if present)
  */
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+    _req: NextRequest,
+    context: { params: Promise<{ id: string }> } // ✅ Fixed: Use Promise params
+) {
     try {
         await connectToDatabase();
-        const { id } = params;
+        const { id } = await context.params; // ✅ Fixed: Await the params
 
         if (!Types.ObjectId.isValid(id)) {
             return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
@@ -135,6 +142,36 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
         console.error("❌ Error deleting menu item:", err);
         return NextResponse.json(
             { error: "Failed to delete menu item", details: err?.message ?? String(err) },
+            { status: 500 }
+        );
+    }
+}
+
+/**
+ * GET — get single menu item
+ */
+export async function GET(
+    _req: NextRequest,
+    context: { params: Promise<{ id: string }> } // ✅ Fixed: Use Promise params
+) {
+    try {
+        await connectToDatabase();
+        const { id } = await context.params; // ✅ Fixed: Await the params
+
+        if (!Types.ObjectId.isValid(id)) {
+            return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+        }
+
+        const menuItem = await MenuItem.findById(id).lean();
+        if (!menuItem) {
+            return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ data: menuItem }, { status: 200 });
+    } catch (err: any) {
+        console.error("❌ Error fetching menu item:", err);
+        return NextResponse.json(
+            { error: "Failed to fetch menu item", details: err?.message ?? String(err) },
             { status: 500 }
         );
     }

@@ -1,5 +1,5 @@
-// /app/api/reservations/[id]/route.ts
-import { NextResponse } from "next/server";
+// /app/api/reservations/[id]/route.ts - FIXED FOR NEXT.JS 15
+import { NextResponse, NextRequest } from "next/server";
 import { connectCustomerDB } from "@/lib/mongodb";
 import Reservation, { IReservation } from "@/models/Reservation";
 import { Types } from "mongoose";
@@ -30,7 +30,10 @@ async function getReservationModel() {
 }
 
 // --- GET ---
-export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _req: NextRequest, // ✅ Fixed: Use NextRequest
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await context.params;
     if (!Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid reservation ID" }, { status: 400 });
@@ -48,7 +51,10 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
 }
 
 // --- DELETE ---
-export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _req: NextRequest, // ✅ Fixed: Use NextRequest
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await context.params;
     if (!Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid reservation ID" }, { status: 400 });
@@ -66,7 +72,10 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
 }
 
 // --- PUT ---
-export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: NextRequest, // ✅ Fixed: Use NextRequest
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await context.params;
     if (!Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid reservation ID" }, { status: 400 });
