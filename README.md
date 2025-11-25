@@ -3,8 +3,7 @@
 This repository contains the **Admin Dashboard** for Maloof’s Restaurant — a powerful control center where restaurant staff can manage reservations, approve bookings, monitor customers, and control menu visibility.
 
 > **Note:**  
-Some email notifications may not be received depending on mailbox spam filters or missing custom domain verification.  
-Design previews on Vercel may look slightly incomplete without an attached paid domain.
+Some email features and certain design elements may look slightly off because no custom domain has been purchased yet.
 
 ---
 

@@ -1,17 +1,24 @@
-// /app/api/email/offers/route.ts - FIXED
 import { NextResponse } from "next/server";
 import { connectCustomerDB } from "@/lib/mongodb";
 import Subscription from "@/models/Subscription";
-import { Resend } from "resend";
+import transporter from "@/lib/nodemailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+// Define TypeScript interface
+interface Subscriber {
+    email: string;
+    name?: string;
+    createdAt?: Date;
+}
 
 export async function POST(req: Request) {
     try {
         const { subject, message } = await req.json();
 
         if (!subject || !message) {
-            return NextResponse.json({ error: "Missing subject or message" }, { status: 400 });
+            return NextResponse.json(
+                { error: "Missing subject or message" },
+                { status: 400 }
+            );
         }
 
         // 🧩 Connect to DB
@@ -26,72 +33,61 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: "No subscribers found" });
         }
 
-        const results = {
-            successful: [] as string[],
-            failed: [] as { email: string; error: any }[]
-        };
+        // Extract all email addresses with proper typing
+        const emailList: string[] = subscribers.map((sub: any) =>
+            sub.email as string
+        );
 
-        // 📨 Send email to each subscriber with proper error handling and rate limiting
-        for (let i = 0; i < subscribers.length; i++) {
-            const sub = subscribers[i];
+        try {
+            // Send single email with BCC to all recipients (more efficient)
+            const mailOptions = {
+                from: {
+                    name: "Maloof's Restaurant",
+                    address: process.env.GMAIL_USER!,
+                },
+                to: process.env.GMAIL_USER!, // Send to yourself
+                bcc: emailList, // All subscribers in BCC
+                subject,
+                html: `
+                    <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:auto;padding:20px;background:#f7f7f7;border-radius:10px;">
+                        <div style="text-align:center;background:#101828;color:white;padding:15px;border-radius:10px 10px 0 0;">
+                            <h1>Maloof's Restaurant 🍽️</h1>
+                        </div>
+                        <div style="background:#101828;padding:25px;border-radius:0 0 10px 10px;">
+                            <h2 style="color:white;">${subject}</h2>
+                            <p style="color:white;">${message}</p>
+                            <p style="margin-top:30px; color:white;">
+                                <strong>You received this email because you subscribed to Maloof's Restaurant updates.</strong>
+                            </p>
+                            <p style="color:#9ca3af; font-size: 12px; text-align: center;">
+                                <a href="https://maloofsrestaurant.vercel.app/unsubscribe" style="color: #93c5fd;">Unsubscribe</a>
+                            </p>
+                        </div>
+                    </div>
+                `,
+            };
 
-            try {
-                console.log(`📤 Sending email to: ${sub.email} (${i + 1}/${subscribers.length})`);
+            await transporter.sendMail(mailOptions);
+            console.log(`✅ Bulk email sent to ${emailList.length} subscribers via BCC`);
 
-                await resend.emails.send({
-                    from: "Maloof's Restaurant <onboarding@resend.dev>",
-                    to: sub.email,
-                    subject,
-                    html: `
-          <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:auto;padding:20px;background:#f7f7f7;border-radius:10px;">
-                <div style="text-align:center;background:#101828;color:white;padding:15px;border-radius:10px 10px 0 0;">
-                    <h1>Maloof's Restaurant 🍽️</h1>
-                </div>
-                <div style="background:#101828;padding:25px;border-radius:0 0 10px 10px;">
-                    <h2 style="color:white;">${subject}</h2>
-                    <p style="color:white;">${message}</p>
-                    <p style="margin-top:30px; color:white;"><strong> You received this email because you subscribed to Maloof's Restaurant updates.</strong></p>
-                </div>
-            </div>
-        `,
-                });
+            return NextResponse.json({
+                message: `Email sent successfully to ${emailList.length} subscribers`,
+                sentCount: emailList.length
+            });
 
-                results.successful.push(sub.email);
-                console.log(`✅ Successfully sent to: ${sub.email}`);
-
-                // ⏰ Add delay to avoid rate limiting (Resend limit: 10 emails/second)
-                if (i < subscribers.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay between emails
-                }
-
-            } catch (error: any) {
-                console.error(`❌ Failed to send to ${sub.email}:`, error?.message || error);
-                results.failed.push({
-                    email: sub.email,
-                    error: error?.message || 'Unknown error'
-                });
-
-                // If it's a rate limit error, wait longer
-                if (error?.statusCode === 429) {
-                    console.log('⏳ Rate limit hit, waiting 5 seconds...');
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                }
-            }
+        } catch (error) {
+            console.error("❌ Error sending bulk email:", error);
+            return NextResponse.json(
+                { error: "Failed to send bulk email" },
+                { status: 500 }
+            );
         }
 
-        console.log(`📊 Email sending completed:
-          ✅ Successful: ${results.successful.length}
-          ❌ Failed: ${results.failed.length}
-        `);
-
-        return NextResponse.json({
-            message: `Emails sent! Successful: ${results.successful.length}, Failed: ${results.failed.length}`,
-            successful: results.successful,
-            failed: results.failed
-        });
-
     } catch (error) {
-        console.error("Error sending offer emails:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        console.error("❌ Error processing offer emails:", error);
+        return NextResponse.json(
+            { error: "Internal Server Error" },
+            { status: 500 }
+        );
     }
 }
