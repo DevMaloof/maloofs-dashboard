@@ -103,6 +103,6 @@ Built using:
 ---
 
 ## 🧑‍💻 Author
-Created by **Mighty Maon**  
+Created by **Dev Maloof**  
 Focused on reliable backend systems, clean UI, and solving real-world restaurant workflow challenges.
 
