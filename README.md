@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛠️ Maloof’s Dashboard — Admin Panel
 
-## Getting Started
+This repository contains the **Admin Dashboard** for Maloof’s Restaurant — a powerful control center where restaurant staff can manage reservations, approve bookings, monitor customers, and control menu visibility.
 
-First, run the development server:
+> **Note:**  
+Some email notifications may not be received depending on mailbox spam filters or missing custom domain verification.  
+Design previews on Vercel may look slightly incomplete without an attached paid domain.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🧾 **1. Reservation Management**
+Admins can:
+- View **all customer reservations**
+- Sort reservations by date
+- Filter by status (pending, confirmed)
+- Approve reservations in one click
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 📤 **2. Email Automation**
+When an admin approves a reservation:
+- System automatically sends an approval email  
+- Email includes:
+  - Customer name  
+  - Reservation date  
+  - Reservation time  
 
-## Learn More
+### 🔐 **3. Secure Admin Login**
+- Google OAuth
+- Email/Password login  
+- Role-based access (Director vs Employee accounts)
 
-To learn more about Next.js, take a look at the following resources:
+### 📊 **4. Dashboard Insights**
+Admin can see:
+- Total Reservations
+- Recent Activity
+- Pending Approvals
+- Live database statistics
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 🗄️ **5. MongoDB Integration**
+Dashboard fetches:
+- Customer reservations
+- User accounts
+- Real-time database updates
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 🚦 **6. API Endpoints for Admin Control**
+Includes routes:
+- `/api/dashboard-data`
+- `/api/reservations`
+- `/api/approve/[id]` (approve reservation)
+- `/api/auth` (NextAuth)
+- `/api/menu` (if extended later)
 
-## Deploy on Vercel
+### 🎨 **7. UI/UX**
+Built using:
+- **Next.js 15 App Router**
+- **Shadcn UI**  
+- **Tailwind CSS**  
+- Responsive panels, modals, cards, and tables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 🧩 **8. Optimized Email System**
+- Uses Nodemailer + SMTP provider  
+- All emails triggered via server-only routes  
+- Error handling + logging included
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🏗️ How It Was Built
+
+### ⚙️ Tech Stack
+- **Next.js 15**
+- **TypeScript**
+- **Shadcn UI**
+- **MongoDB + Mongoose**
+- **NextAuth.js**
+- **Nodemailer**
+
+### 🔌 Architecture
+- Separate DB connection for dashboard & customer side  
+- Mongoose factory pattern  
+- Dynamic route: `/api/approve/[id]`  
+- API validation through TypeScript  
+- Admin-only pages protected using server-side session checks
+
+---
+
+## 🧪 API Workflow Example
+### Approve Reservation
+1. Admin clicks **Approve**
+2. Request sent to `/api/approve/[id]`
+3. System:
+   - Updates reservation status  
+   - Sends approval email  
+   - Returns success response  
+
+---
+
+## ⚠️ Important Notes
+- Emails may go to spam: search **`in:spam`** in Gmail  
+- Email services may not fully work without buying and verifying a custom domain  
+- Production visuals may differ slightly on Vercel because of domain restrictions
+
+---
+
+## 🧑‍💻 Author
+Created by **Mighty Maon**  
+Focused on reliable backend systems, clean UI, and solving real-world restaurant workflow challenges.
+
