@@ -36,7 +36,7 @@ export async function sendReservationEmail(
                 ${status === "approved"
       ? `
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="https://maloofsrestaurant.vercel.app"
+                        <a href="https://maloof-s-dining.vercel.app/"
                         style="background-color: #101828; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block;">
                         View Reservation
                         </a>
