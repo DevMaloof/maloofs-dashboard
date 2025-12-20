@@ -2,110 +2,131 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Card } from "@/components/ui/card";
-import { SquareMenu, Clock, CheckCheck } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Calendar, Clock, CheckCircle, TrendingUp,
+  Star, BarChart3, CalendarRange,
+  ChefHat
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
-type RangeKey = "today" | "week" | "month" | "all";
+type RangeKey = "today" | "week" | "month" | "quarter" | "year";
 
 interface StatsResponse {
   total: number;
   pending: number;
   completed: number;
+  cancelled: number;
+  revenue: number;
+  avgPartySize: number;
 }
 
 interface TrendPoint {
   date: string;
   count: number;
+  revenue: number;
 }
 
-const RANGES: { key: RangeKey; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "This Week" },
-  { key: "month", label: "This Month" },
-  { key: "all", label: "All Time" },
+const RANGES: { key: RangeKey; label: string; icon: React.ReactNode }[] = [
+  { key: "today", label: "Today", icon: <Calendar className="h-4 w-4" /> },
+  { key: "week", label: "This Week", icon: <CalendarRange className="h-4 w-4" /> },
+  { key: "month", label: "This Month", icon: <BarChart3 className="h-4 w-4" /> },
+  { key: "quarter", label: "Quarter", icon: <TrendingUp className="h-4 w-4" /> },
+  { key: "year", label: "Year", icon: <ChefHat className="h-4 w-4" /> },
 ];
 
-// Helper to get today UTC string
-function todayUTC() {
-  const now = new Date();
-  return now.toISOString().split("T")[0]; // "YYYY-MM-DD"
-}
+function StatCard({
+  title,
+  value,
+  icon,
+  change,
+  loading,
+  color = "blue",
+  format = "number"
+}: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  change?: string;
+  loading: boolean;
+  color?: "blue" | "green" | "purple" | "amber";
+  format?: "number" | "currency" | "time";
+}) {
+  const colorClasses = {
+    blue: "from-blue-500/20 to-blue-600/10 border-blue-500/30",
+    green: "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30",
+    purple: "from-purple-500/20 to-purple-600/10 border-purple-500/30",
+    amber: "from-amber-500/20 to-amber-600/10 border-amber-500/30"
+  };
 
-function Sparkline({ data }: { data: TrendPoint[] }) {
-  const width = 700;
-  const height = 160;
-  const padding = 12;
+  const formatValue = (val: number) => {
+    const safeVal = val ?? 0;
 
-  if (!data || data.length === 0) {
-    return <div className="text-gray-400 italic text-sm">No trend data available</div>;
-  }
-
-  const counts = data.map((d) => d.count);
-  const max = Math.max(...counts);
-  const min = Math.min(...counts);
-  const vRange = max === min ? max || 1 : max - min;
-  const step = (width - padding * 2) / Math.max(1, data.length - 1);
-
-  const points = data
-    .map((d, i) => {
-      const x = padding + i * step;
-      const y = padding + (height - padding * 2) * (1 - (d.count - min) / vRange);
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  const areaPath = (() => {
-    const top = data
-      .map((d, i) => {
-        const x = padding + i * step;
-        const y = padding + (height - padding * 2) * (1 - (d.count - min) / vRange);
-        return `${x},${y}`;
-      })
-      .join(" ");
-    const lastX = padding + (data.length - 1) * step;
-    return `M ${padding},${height - padding} L ${top} L ${lastX},${height - padding} Z`;
-  })();
-
-  const firstLabel = data[0]?.date;
-  const lastLabel = data[data.length - 1]?.date;
+    if (format === "currency") return `$${safeVal.toLocaleString()}`;
+    if (format === "time") return `${safeVal} min`;
+    return safeVal.toLocaleString();
+  };
 
   return (
-    <div className="w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-40">
-        <defs>
-          <linearGradient id="sparkline-grad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-        <path d={areaPath} fill="url(#sparkline-grad)" />
-        <polyline
-          fill="none"
-          stroke="#60a5fa"
-          strokeWidth={2.4}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          points={points}
-        />
-        {data.map((d, i) => {
-          const x = padding + i * step;
-          const y = padding + (height - padding * 2) * (1 - (d.count - min) / vRange);
-          return (
-            <circle
-              key={i}
-              cx={x}
-              cy={y}
-              r={i === data.length - 1 ? 3.2 : 2.2}
-              fill={i === data.length - 1 ? "#60a5fa" : "#1f2937"}
-              stroke="#60a5fa"
-              strokeWidth={0.6}
-            />
-          );
-        })}
-      </svg>
-      <div className="flex justify-between text-xs text-gray-400 mt-2 px-2">
-        <div className={firstLabel === todayUTC() ? "font-bold" : ""}>{firstLabel}</div>
-        <div className={lastLabel === todayUTC() ? "font-bold" : ""}>{lastLabel}</div>
+    <Card className={`bg-gradient-to-br ${colorClasses[color]} border overflow-hidden group hover:shadow-lg transition-all duration-300`}>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white mb-1">{title}</p>
+            <h3 className="text-3xl font-bold text-white mb-2">
+              {loading ? <Skeleton className="h-9 w-24 bg-gray-700" /> : formatValue(value)}
+            </h3>
+            {change && (
+              <div className="flex items-center gap-1">
+                <TrendingUp className="h-4 w-4 text-emerald-400" />
+                <span className="text-sm text-emerald-400 font-medium">{change}</span>
+              </div>
+            )}
+          </div>
+          <div className="p-3 rounded-xl bg-white/5 backdrop-blur-sm">
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SparklineChart({ data }: { data: TrendPoint[] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[400px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto bg-gray-800 rounded-full flex items-center justify-center mb-4">
+            <TrendingUp className="h-8 w-8 text-gray-500" />
+          </div>
+          <p className="text-gray-400">No data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-[400px]">
+      <div className="absolute inset-0">
+        {/* Simplified sparkline visualization */}
+        <div className="flex items-end h-full gap-2 px-4">
+          {data.map((point, i) => {
+            const height = (point.count / Math.max(...data.map(d => d.count))) * 100;
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center justify-end">
+                <div
+                  className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg transition-all duration-300 hover:from-blue-400 hover:to-blue-300"
+                  style={{ height: `${Math.max(20, height)}%` }}
+                />
+                {i % 2 === 0 && (
+                  <span className="text-xs text-gray-500 mt-3">{point.date.slice(5)}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -131,36 +152,83 @@ function RecentReviews() {
     fetchReviews();
   }, []);
 
-  if (loading) return <div className="text-gray-400 text-center mt-8">Loading reviews...</div>;
-  if (!reviews || reviews.length === 0) return <div className="text-gray-400 text-center mt-8">No reviews yet</div>;
+  if (loading) {
+    return (
+      <div className="h-[400px] space-y-4">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-full bg-gray-700" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-32 bg-gray-700" />
+              <Skeleton className="h-3 w-24 bg-gray-700" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!reviews || reviews.length === 0) {
+    return (
+      <div className="h-[400px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto bg-gray-800 rounded-full flex items-center justify-center mb-4">
+            <Star className="h-8 w-8 text-gray-500" />
+          </div>
+          <p className="text-gray-400">No reviews yet</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="divide-y divide-gray-800">
-      {reviews.map((r, i) => (
-        <div key={i} className="p-3 flex flex-col bg-gray-800">
-          <div className="flex items-center justify-between">
-            <p className="font-bold text-gray-50">{r.name}</p>
-            <p className="text-yellow-400 text-sm">
-              {"⭐".repeat(r.rating)} <span className="text-gray-100 text-xs ml-1">({r.rating}/5)</span>
+    <div className="h-[400px] overflow-y-auto pr-2 space-y-4">
+      {reviews.slice(0, 8).map((review, index) => (
+        <div key={index} className="flex items-start gap-3 p-4 rounded-xl bg-gray-800/50 hover:bg-gray-800 transition-colors">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-600/10 flex items-center justify-center">
+              <Star className="h-5 w-5 text-amber-400" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <h4 className="font-medium text-white truncate">{review.name}</h4>
+              <div className="flex items-center">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-4 w-4 ${i < review.rating ? "text-amber-400 fill-amber-400" : "text-gray-600"}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <p className="text-gray-300 text-sm line-clamp-2 italic">"{review.comment}"</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {new Date(review.createdAt).toLocaleDateString()}
             </p>
           </div>
-          <p className="text-gray-200 font-medium italic text-sm mt-1">{r.comment}</p>
-          <p className="text-xs text-gray-300 mt-1">{new Date(r.createdAt).toLocaleString()}</p>
         </div>
       ))}
     </div>
   );
 }
 
-export default function Home() {
+export default function StaffDashboard() {
   const [range, setRange] = useState<RangeKey>("week");
-  const [stats, setStats] = useState<StatsResponse>({ total: 0, pending: 0, completed: 0 });
+  const [stats, setStats] = useState<StatsResponse>({
+    total: 0,
+    pending: 0,
+    completed: 0,
+    cancelled: 0,
+    revenue: 0,
+    avgPartySize: 0
+  });
   const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingTrend, setLoadingTrend] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedRangeLabel = useMemo(() => RANGES.find((r) => r.key === range)?.label || "Range", [range]);
+  const selectedRangeLabel = useMemo(() => RANGES.find((r) => r.key === range)?.label || "Week", [range]);
 
   useEffect(() => {
     let ignore = false;
@@ -203,72 +271,106 @@ export default function Home() {
   }, [range]);
 
   return (
-    <div className="min-h-screen w-full bg-gray-950 text-white grid gap-6 px-4 py-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 auto-rows-min">
+    <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950 text-white">
       {/* Header */}
-      <div className="sm:col-span-2 lg:col-span-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="text-lg font-semibold">Dashboard</div>
-          <div className="flex items-center gap-2">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRange(r.key)}
-                className={`text-sm px-3 py-1 rounded-md transition ${range === r.key ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-200 hover:bg-gray-700"}`}
-              >
-                {r.label}
-              </button>
-            ))}
+      <div className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">Staff Dashboard</h1>
+              <p className="text-gray-400 text-sm">Restaurant management overview</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setRange(r.key)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${range === r.key
+                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg"
+                    : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                    }`}
+                >
+                  {r.icon}
+                  <span className="text-sm font-medium">{r.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <Card className="relative h-44 w-full bg-gray-900 text-white font-bold border-0">
-        <div className="absolute top-4 right-4"><SquareMenu size={28} color="#f3f4f6" /></div>
-        <div className="h-full flex flex-col items-center justify-center">
-          <div className="text-5xl text-gray-100 font-extrabold">{loadingStats ? "…" : stats.total}</div>
-          <div className="text-xl text-gray-100 font-medium mt-2">Total Reservations</div>
-          <div className="text-sm text-gray-400 mt-2">{selectedRangeLabel}</div>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Stats Grid - Now 3 cards only */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <StatCard
+            title="Total Reservations"
+            value={stats.total}
+            icon={<Calendar className="h-6 w-6 text-blue-400" />}
+            loading={loadingStats}
+            color="blue"
+          />
+          <StatCard
+            title="Pending Approvals"
+            value={stats.pending}
+            icon={<Clock className="h-6 w-6 text-amber-400" />}
+            loading={loadingStats}
+            color="amber"
+          />
+          <StatCard
+            title="Completed"
+            value={stats.completed}
+            icon={<CheckCircle className="h-6 w-6 text-emerald-400" />}
+            loading={loadingStats}
+            color="green"
+          />
         </div>
-      </Card>
 
-      <Card className="relative h-44 w-full bg-gray-900 text-white font-bold border-0">
-        <div className="absolute top-4 right-4"><Clock size={28} color="#f3f4f6" /></div>
-        <div className="h-full flex flex-col items-center justify-center">
-          <div className="text-5xl text-gray-100 font-extrabold">{loadingStats ? "…" : stats.pending}</div>
-          <div className="text-xl text-gray-100 font-medium mt-2">Pending Approvals</div>
-          <div className="text-sm text-gray-400 mt-2">{selectedRangeLabel}</div>
+        {/* Main Dashboard Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Trend Chart (2/3 width) with increased height */}
+          <div className="lg:col-span-2">
+            <Card className="border-gray-800 bg-gray-900/50">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg text-white font-bold">Reservations Trend</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                      <span className="text-sm text-gray-400">Reservations</span>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="min-h-[400px]">
+                {loadingTrend ? (
+                  <div className="h-[400px] flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-500 border-t-transparent" />
+                  </div>
+                ) : (
+                  <SparklineChart data={trend} />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Recent Reviews (1/3 width) with increased height */}
+          <div className="lg:col-span-1">
+            <Card className="border-gray-800 bg-gray-900/50">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg text-white font-bold">Recent Reviews</CardTitle>
+                <Badge variant="outline" className="border-amber-500/30 text-amber-400">
+                  {trend.length > 0 ? trend[trend.length - 1]?.count : 0} this week
+                </Badge>
+              </CardHeader>
+              <CardContent className="min-h-[400px]">
+                <RecentReviews />
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </Card>
-
-      <Card className="relative h-44 w-full bg-gray-900 text-white font-bold border-0">
-        <div className="absolute top-4 right-4"><CheckCheck size={28} color="#f3f4f6" /></div>
-        <div className="h-full flex flex-col items-center justify-center">
-          <div className="text-5xl text-gray-100 font-extrabold">{loadingStats ? "…" : stats.completed}</div>
-          <div className="text-xl text-gray-100 font-medium mt-2">Completed Reservations</div>
-          <div className="text-sm text-gray-400 mt-2">{selectedRangeLabel}</div>
-        </div>
-      </Card>
-
-      {/* Trend Graph */}
-      <Card className="h-72 w-full bg-gray-900 text-white font-bold border-0 flex flex-col p-4 sm:col-span-2 lg:col-span-2">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-lg font-semibold">Reservations Trend</div>
-          <div className="text-sm text-gray-400">{loadingTrend ? "Loading..." : `${trend.length} points`}</div>
-        </div>
-        <div className="flex-1 flex items-center justify-center w-full">
-          {loadingTrend ? <div className="text-gray-400">Loading chart...</div> : trend.length === 0 ? <div className="text-gray-400">No trend data to show</div> : <Sparkline data={trend} />}
-        </div>
-      </Card>
-
-      {/* Recent Reviews */}
-      <Card className="block h-72 w-full bg-gray-900 text-white border-0 overflow-y-auto">
-        <p className="text-3xl font-bold text-center py-4 border-b border-gray-800">Recent Reviews</p>
-        <RecentReviews />
-      </Card>
-
-      {/* Error Toast */}
-      {error && <div className="sm:col-span-2 lg:col-span-3"><div className="bg-red-800 text-white p-3 rounded-md">{error}</div></div>}
+      </div>
     </div>
   );
 }
